@@ -1,6 +1,18 @@
 
 # coding: utf-8
 
+# In[ ]:
+
+
+'''
+Author:
+    Shenxin Zhan,zhanshenxin135@163.com
+    
+Reference:
+    https://www.csie.ntu.edu.tw/~b97053/paper/Rendle2010FM.pdf
+'''
+
+
 # In[10]:
 
 
@@ -14,6 +26,9 @@ from common import FirstOrder, SecondOrder
 
 
 class FM(nn.Module):
+    '''implement Factorization Machine by PyTorch
+    
+    '''
     def __init__(self, params):
         super(FMModel, self).__init__()
         
