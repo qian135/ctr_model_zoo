@@ -220,3 +220,49 @@ class MLP(nn.Module):
         deepOut = self.deep_layers(deepInput)
         return deepOut
 
+
+# In[ ]:
+
+
+class CIN(nn.Module):
+    '''xDeepFM CIN Module
+    '''
+    def __init__(self, params):
+        super(CIN, self).__init__()
+        # parse params
+        self.split_half = params['split_half']
+        self.field_size = params['field_size']
+        self.hidden_dims = params['cin_hidden_dims']
+        self.num_layers = len(self.hidden_dims)
+        
+        self.net_dims = [self.field_size]+self.hidden_dims
+        self.hidden_dims_split_half = [self.field_size]
+        self.conv1ds = nn.ModuleList()
+        for i in range(self.num_layers):
+#             h_weights['h_weight%d' % (i+1)] = torch.empty(net_dims[i], self.field_size)
+#             nn.init.normal_(h_weights['h_weight%d' % (i+1)])
+            self.conv1ds.append(nn.Conv1d(self.net_dims[0]*self.hidden_dims_split_half[-1], self.net_dims[i+1], 1))
+            if self.split_half:
+                self.hidden_dims_split_half.append(self.net_dims[i+1] // 2)
+            else:
+                self.hidden_dims_split_half.append(self.net_dims[i+1])
+        
+    def forward(self, inputs):
+        res = []
+        h = [inputs]
+        for i in range(self.num_layers):
+            temp = torch.einsum('bhd,bmd->bhmd', h[-1], h[0])
+            temp = temp.reshape(inputs.shape[0], h[-1].shape[1]*inputs.shape[1], inputs.shape[2])
+            # b * hi * d
+            temp = self.conv1ds[i](temp)
+            if self.split_half:
+                next_hidden, hi = torch.split(temp, 2*[temp.shape[1]//2], 1)
+            else:
+                next_hidden, hi = temp, temp
+            h.append(next_hidden)
+            res.append(hi)
+        res = torch.cat(res, dim=1)
+        # b * (h1 + h2 + ... + hn)
+        res = torch.sum(res, dim=2)
+        return res
+
